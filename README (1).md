@@ -49,20 +49,40 @@ zero-shot RealWaste accuracy without ever using RealWaste in training:**
 | EfficientNet-B3 | 53.8% |
 | ViT-Small (lr=2e-5) | **64.5%** (best zero-shot result in the project) |
 
-**4. TACO reveals a scope boundary, not a failure:** all three models collapse
+**4. Fine-tuning with a small slice of target-domain data closes most of the
+domain gap.** Injecting just 15% of RealWaste into training (still holding
+the rest out for evaluation) lifts all three architectures well past their
+zero-shot OOD numbers, with ViT-Small reaching the best overall result:
+
+| Model | Zero-shot OOD | Fine-tuned OOD (15% RealWaste) | Improvement |
+|---|---|---|---|
+| ResNet-50 | 60.0% | 76.4% | +16.4 pts |
+| EfficientNet-B3 | 53.6% | 79.9% | +26.3 pts |
+| ViT-Small | 62.2% | **81.6%** (best overall) | +19.4 pts |
+
+![Zero-shot vs fine-tuned OOD accuracy](reports/finetuning_comparison.png)
+![Fine-tuning improvement by model](reports/finetuning_gain.png)
+
+EfficientNet-B3 benefits the most in absolute terms (+26.3 pts) despite
+being the weakest zero-shot model, suggesting its failures were more about
+missing exposure to real-world texture/lighting than an architectural
+limitation. ViT-Small still wins on final accuracy, consistent with finding
+5 below (best raw accuracy, worst calibration).
+
+**5. TACO reveals a scope boundary, not a failure:** all three models collapse
 to 33-39% on TACO regardless of mitigation — but converge to nearly the same
 number, indicating a task-structure mismatch (object-centric classification
 vs. in-context litter detection) rather than a generalization failure.
 Addressing this would require a detection architecture (e.g. YOLO), out of
 scope for this project.
 
-**5. Calibration analysis reveals an accuracy/calibration trade-off:**
+**6. Calibration analysis reveals an accuracy/calibration trade-off:**
 ViT-Small is the most accurate OOD model but the *worst* calibrated
 (highest overconfidence, lowest OOD-detection AUROC); EfficientNet-B3 is
 the reverse. This pattern reproduces across both RealWaste and the own
 dataset — see `reports/reliability_diagram.png`.
 
-**6. Statistical testing (Wilcoxon, McNemar)** confirms all architecture
+**7. Statistical testing (Wilcoxon, McNemar)** confirms all architecture
 differences on RealWaste (n=3,092) are significant. On the smaller own
 dataset (n=142), not all differences reach significance — see the report
 for the full breakdown.
@@ -114,6 +134,9 @@ reports/
   confusion_matrices_realwaste.png
   reliability_diagram.png
   results_bar_chart_v2.png
+  finetuning_comparison.png  - zero-shot vs. fine-tuned (15% RealWaste) OOD
+                              accuracy, all 3 models
+  finetuning_gain.png        - fine-tuning improvement magnitude by model
 
 report/
   ofu_xai_2022.pdf        - final written report (compiled PDF)
@@ -122,7 +145,24 @@ report/
   figures/                - self-contained copy of the figures used in the
                            report, so it recompiles standalone without
                            depending on the reports/ folder above
+
+app.py                    - Streamlit demo app: upload a trained checkpoint
+                           and an image, get a live prediction + Grad-CAM
+                           overlay (see "Interactive Demo" below)
 ```
+
+## Interactive Demo
+
+A Streamlit app (`app.py`) lets you try the models interactively:
+
+```bash
+pip install -r requirements.txt
+python -m streamlit run app.py
+```
+
+Upload a trained checkpoint in the sidebar (architecture must match), then
+upload a waste image to see the predicted class, confidence breakdown, and
+a Grad-CAM heatmap of what the model focused on.
 
 ## How to Run
 
